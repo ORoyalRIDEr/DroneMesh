@@ -2,22 +2,23 @@
 
 import os, sys
 
-#variables
+##variables
 
-#invalid string
-invalid = "Ungueltige Eingabe\n"
+#error messages
+#invalid input
+invInpMsg = "Ungueltige Eingabe\n"
 
-#modul
+#module to be installed
 moduls = {1:"Kontrollstation", 2:"Drohne", 3:"Repeater"}
-modul = "none"
+module = "none"
 
 #autorun on or off
 autorun = False
 
-#pathname
+#path for installation
 pathname = "/opt"
 
-#check directory, must be *pathname*
+##check directory, must be *pathname*
 path = os.path.dirname(os.path.abspath(sys.argv[0]))
 if (path != "%s/droneMesh"%pathname):
 	while True:
@@ -32,32 +33,32 @@ if (path != "%s/droneMesh"%pathname):
 			print("Verschieben sie die Dateien bitte manuell und starten sie die Installation neu.")
 			sys.exit()
 			break
-		print(invalid)
+		print(invInpMsg)
 		
 #configuration file
 conf = open("%s/droneMesh/conf.dat"%pathname,"w")
 
 
-#choose modul
+##choose module
 while True:
 	#get user input
 	print("Waehlen sie das zu installierende Modul:\n1: %s\n2: %s\n3: %s"%(moduls[1],moduls[2],moduls[3]))
 	inp = input()
 	#parse uer input
-	try: modul = int(inp)
+	try: module  = int(inp)
 	except ValueError:
-		print(invalid)
+		print(invInpMsg)
 		continue
 		
 	#check if user input is valid
-	if((modul<1) or (modul>3)):
-		print(invalid)
+	if(not((module-1) in range(3))):
+		print(invInpMsg)
 		continue
 	else: break
-print("%s wurde ausgewaehlt"%moduls[modul])	
+print("%s wurde ausgewaehlt"%moduls[module])	
 
 
-#choose autorun
+##choose autorun
 while True:
 	#get user input
 	print("Soll das Modul im Autostart geladen werden? (j/n)")
@@ -68,10 +69,10 @@ while True:
 	elif(inp == 'n'): 
 		autorun = False
 		break
-	print(invalid)
+	print(invInpMsg)
 	
 #write config file
-conf.write("module:%i\nautorun:%i"%(modul, int(autorun)))
+conf.write("module:%i\nautorun:%i"%(module, int(autorun)))
 
 #copy autostart file to /etc/init
 os.system("sudo cp autorun.conf /etc/init/droneMeshAuto.conf")
@@ -79,8 +80,10 @@ os.system("sudo cp autorun.conf /etc/init/droneMeshAuto.conf")
 #install batctl for controlling batman
 os.system("sudo apt-get install batctl")
 
-#install isc-dhcpd and vlc if modul is 1
-if(modul == 1):
+##run module dependent processes
+
+#install isc-dhcpd and vlc if module is control station
+if(module == 1):
 	#install DHCP-Server
 	print("\nInstall DHCP-Server...")
 	os.system("sudo apt-get install isc-dhcp-server")
@@ -92,8 +95,8 @@ if(modul == 1):
 	print("\nInstall VLC-Media-Player...")
 	os.system("sudo apt-get install vlc")
 	
-#install vlc if nodul is 2
-elif(modul == 2):
+#install vlc if module is drone
+elif(module == 2):
 	#install vlc
 	print("\nInstall VLC-Media-Player...")
 	os.system("sudo apt-get install vlc")
