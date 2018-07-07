@@ -85,10 +85,10 @@ for line in cont:
 	if (line == insertLine):
 		entryFound = 1
 		break
-#if not, insert entry
-newFileCont = []
-entryWritten = 0
+#if not found, insert entry
 if (entryFound == 0):
+	newFileCont = []
+	entryWritten = 0
 	for line in cont:
 		#skip comment lines
 		if (not(entryWritten) and (line[0] != "#")):
@@ -96,22 +96,11 @@ if (entryFound == 0):
 			entryWritten = 1
 			
 		newFileCont.append(line)
-#write to new file
-f = open("/etc/rc.local", "w")
-newFileCont = "".join(newFileCont)
-f.write(newFileCont)
-f.close()
-#print(newFileCont)
-#testFile = open("test", "w") ###debug!
-#testFile.write(newFileCont)
-#testFile.close()
-
-			
-		
-	
-EOF = 0
-while (EOF != 0):
-	line = f.readline()
+	#write to file
+	f = open("/etc/rc.local", "w")
+	newFileCont = "".join(newFileCont)
+	f.write(newFileCont)
+	f.close()
 	 
 
 #install batctl for controlling batman
@@ -138,7 +127,9 @@ elif(module == 2):
 	#install vlc
 	print("\nInstall VLC-Media-Player...")
 	os.system("sudo apt-get install vlc")
-	#os.system("sudo cp /configs/vlcrc /home")
+	#copy configuration files for DHCP-Server
+	print("\nCopy Configuration Files...")
+	#os.system("sudo cp configs/vlcrc /home/pi/.config/vlc/") #not working, because vlc-direction doesn't exist
 	
 	
 #create ignoredInterfaces-file if doesn't exist:
@@ -149,6 +140,3 @@ except FileNotFoundError:
 	f = open("ignoredInterfaces", "w")
 	f.write("#The following network interface hw-adresses will be ignored when running the module")
 	f.close()
-	
-
-#p = subprocess.run(["sudo", "apt-get", "install", "isc-dhcpd"])
