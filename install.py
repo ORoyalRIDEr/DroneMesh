@@ -36,7 +36,7 @@ if (path != "%s/droneMesh"%pathname):
 		print(invInpMsg)
 		
 #configuration file
-conf = open("%s/droneMesh/conf.dat"%pathname,"w")
+conf = open("%s/droneMesh/configs/conf.dat"%pathname,"w")
 
 
 ##choose module
@@ -74,8 +74,45 @@ while True:
 #write config file
 conf.write("module:%i\nautorun:%i"%(module, int(autorun)))
 
-#copy autostart file to /etc/init
-os.system("sudo cp autorun.conf /etc/init/droneMeshAuto.conf")
+#set "autorun.py" to autostart via /etc/rc.local
+insertLine = "%s/droneMesh/autorun.py &\n"%pathname
+f = open("/etc/rc.local", "r")
+cont = f.readlines()
+f.close()
+#check if entry already exists
+entryFound = 0
+for line in cont:
+	if (line == insertLine):
+		entryFound = 1
+		break
+#if not, insert entry
+newFileCont = []
+entryWritten = 0
+if (entryFound == 0):
+	for line in cont:
+		#skip comment lines
+		if (not(entryWritten) and (line[0] != "#")):
+			newFileCont.append(insertLine)
+			entryWritten = 1
+			
+		newFileCont.append(line)
+#write to new file
+f = open("/etc/rc.local", "w")
+newFileCont = "".join(newFileCont)
+f.write(newFileCont)
+f.close()
+#print(newFileCont)
+#testFile = open("test", "w") ###debug!
+#testFile.write(newFileCont)
+#testFile.close()
+
+			
+		
+	
+EOF = 0
+while (EOF != 0):
+	line = f.readline()
+	 
 
 #install batctl for controlling batman
 os.system("sudo apt-get install batctl")
@@ -89,7 +126,8 @@ if(module == 1):
 	os.system("sudo apt-get install isc-dhcp-server")
 	#copy configuration files for DHCP-Server
 	print("\nCopy Configuration Files...")
-	os.system("sudo cp dhcpd.conf /etc/dhcp/")
+	os.system("sudo cp configs/dhcpd.conf /etc/dhcp/")
+	os.system("sudo cp configs/isc-dhcp-server /etc/default/")
 	
 	#install vlc
 	print("\nInstall VLC-Media-Player...")
@@ -100,6 +138,17 @@ elif(module == 2):
 	#install vlc
 	print("\nInstall VLC-Media-Player...")
 	os.system("sudo apt-get install vlc")
+	#os.system("sudo cp /configs/vlcrc /home")
+	
+	
+#create ignoredInterfaces-file if doesn't exist:
+try: 
+	f = open("ignoredInterfaces", "r")
+	f.close()
+except FileNotFoundError:
+	f = open("ignoredInterfaces", "w")
+	f.write("#The following network interface hw-adresses will be ignored when running the module")
+	f.close()
 	
 
 #p = subprocess.run(["sudo", "apt-get", "install", "isc-dhcpd"])

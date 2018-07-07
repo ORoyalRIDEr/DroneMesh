@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import os, sys
+import subprocess
+import time
 
 ##variables
 
@@ -18,7 +20,7 @@ pathname = "/opt"
 ##set module
 
 #read settings.dat
-try: f = open("%s/droneMesh/conf.dat"%pathname, "r")
+try: f = open("%s/droneMesh/configs/conf.dat"%pathname, "r")
 except FileNotFoundError:
 	print(fileErrorMsg)
 	sys.exit()
@@ -44,10 +46,9 @@ print("Starte Modul '%s'..."%moduls[module])
 
 
 #stop dhcpcd to configure network interfaces
-#os.system("service dhcpcd stop") ###  debug
-
-#run batman module
-os.system("modprobe batman-adv")
+subprocess.run(["sudo", "service", "dhcpcd", "stop"])
+#load module batman
+subprocess.run(["sudo", "modprobe", "batman-adv"])
 
 ##find wifi interfaces
 
@@ -61,12 +62,19 @@ for a in range(2):
     netInt.readline()
     
 #read interface that should be ignored
-f = open("ignoredInterfaces","r")
-ignInt = f.readlines()
-#remove new line charackters:
-for i in range(len(ignInt)):
-	ignInt[i] = ignInt[i].split("\n")[0]
-f.close()
+ignInt = []
+try: 
+	f = open("%s/droneMesh/configs/ignoredInterfaces"%pathname,"r")
+	ignInt = f.readlines()
+	#remove new line charackters:
+	for i in range(len(ignInt)):
+		ignInt[i] = ignInt[i].split("\n")[0]
+	f.close()
+except FileNotFoundError:
+	#create ignoredInterfaces-file
+	f = open("%s/droneMesh/configs/ignoredInterfaces"%pathname,"w")
+	f.write("#The following network interface hw-adresses will be ignored when running the module")
+	f.close()
 
 lines = netInt.readlines()
 for line in lines:
@@ -79,10 +87,11 @@ for line in lines:
 ##set up network:
 for interface in wlInt:
     print("\nsetting up %s\n"%interface)
-    process = os.popen('ip link set mtu 1560 dev %s'%interface)
-    process = os.popen('iwconfig %s mode ad-hoc essid droneMesh channel 1'%interface)
-    process = os.popen('batctl if add %s'%interface)
-    process = os.popen('ip link set up dev %s'%interface)
+    subprocess.run(["ip", "link", "set", "mtu", "1560", "dev", interface])
+    subprocess.run(["iwconfig", interface, "mode", "ad-hoc", "essid", "droneMesh", "channel", "1"])
+    subprocess.run(["batctl", "if", "add", interface])
+    subprocess.run(["ip", "link", "set", "up", "dev", interface])
+subprocess.run(["ip", "link", "set", "up", "dev", "bat0"])
     
     
 ##run module dependent processes
@@ -91,29 +100,32 @@ for interface in wlInt:
 if (module == 1):
 	#set ip address
 	for interface in wlInt:
-		os.system("sudo ip addr add 169.254.255.1 dev %s"%interface)
+		subprocess.run(["sudo", "ip", "addr", "add", "10.254.239.1/24", "dev", "bat0"])
 	
 	#start DHCP-Server
-	p = subprocess.run([]) ### run DHCP Server
+	subprocess.run(["sudo", "service", "isc-dhcp-server", "start"])
 	
 	#start VLC-Media-Player
-	os.system("")
+	print("\nGeben sie ein Nicht-Administratorkonto an, mit dem der VLC-Player gestartet werden soll:")
+	nonsudousr = input()
+	os.system("su -c \"vlc rtp://@:5004\" %s"%nonsudousr)
 	
 #drone
 if (module == 2):
 	#set ip address
 	for interface in wlInt:
-		os.system("sudo ip addr add 169.254.255.2 dev %s"%interface) ### validate ip address
+		subprocess.run(["sudo", "ip", "addr", "add", "10.254.239.2/24", "dev", "bat0"])
 		
-	#start VLC-Media-Player
-	os.system("")
+	#run VLC-Media-Player
+	subprocess.run(["su", "-c", "cvlc -vvv v4l2:///dev/video0 --sout '#transcode{vcodec=h264,vb=800,acodec=mpga,ab=128,channels=2,samplerate=44100}:rtp{dst=10.254.239.1,port=5004,mux=ts,sap,name=test}' --sout-keep", "pi"])
 	
 #repeater
 if (module == 3):
-	#ping DHCP Server:
-	p = subprocess.run(["ping"], ["169.254.255.1"], ["-c"], ["2"])
-	### evaluate response
-	### request ip address
+	#ping DHCP Server until it's reachable:
+	while True:
+		p = subprocess.run(["sudo", "dhclient", "bat0", "-cf", "configs/dhclient.conf"])
+		if (p != 0): break
+		time.sleep(2)
 
 
 
